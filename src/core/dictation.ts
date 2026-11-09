@@ -88,3 +88,41 @@ export function deepgramListenUrl(language: DictationLanguage): string {
 		"&smart_format=true&punctuate=true&endpointing=300" +
 		`&language=${encodeURIComponent(language)}`;
 }
+
+/** Where speech becomes text. Deepgram streams to the cloud; the Whisper
+ * engines run on this computer (transformers.js in a renderer worker), so
+ * audio never leaves the machine — only the model download goes out, once. */
+export type DictationEngine = "deepgram" | "whisper-base" | "whisper-small";
+
+export const DICTATION_ENGINES: readonly { code: DictationEngine; label: string; detail: string }[] = [
+	{ code: "deepgram", label: "Deepgram", detail: "Cloud, needs a key" },
+	{ code: "whisper-base", label: "Whisper Base", detail: "On this computer, fast (~80 MB download)" },
+	{ code: "whisper-small", label: "Whisper Small", detail: "On this computer, more accurate (~250 MB download)" },
+];
+
+export function isDictationEngine(value: unknown): value is DictationEngine {
+	return DICTATION_ENGINES.some(({ code }) => code === value);
+}
+
+export function isLocalDictationEngine(engine: DictationEngine): engine is "whisper-base" | "whisper-small" {
+	return engine !== "deepgram";
+}
+
+/** Whisper's language codes (its tokenizer rejects anything else). */
+const WHISPER_LANGUAGE_CODES = new Set([
+	"en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi",
+	"vi", "he", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur", "hr", "bg", "lt", "la", "mi", "ml",
+	"cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs",
+	"kk", "sq", "sw", "gl", "mr", "pa", "si", "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am",
+	"yi", "lo", "uz", "fo", "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln",
+	"ha", "ba", "jw", "su",
+]);
+
+/** The shared language preference, as Whisper understands it. Deepgram's
+ * locale aliases ("de-CH", "en-GB") keep only their base language; null
+ * means auto-detect — Multilingual, or a language Whisper doesn't know. */
+export function whisperLanguage(language: DictationLanguage): string | null {
+	if (language === "multi") return null;
+	const base = (language.split("-")[0] ?? "").toLowerCase();
+	return WHISPER_LANGUAGE_CODES.has(base) ? base : null;
+}

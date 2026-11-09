@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { DICTATION_LANGUAGES, type DictationLanguage } from "@/src/core";
+import { DICTATION_ENGINES, DICTATION_LANGUAGES, isDictationEngine, isLocalDictationEngine, type DictationLanguage } from "@/src/core";
 import { MenuShell } from "@/components/menu-shell";
 import { Hint } from "@/components/ui/hint";
-import { SettingsMenuTrigger, SettingsRow } from "@/components/settings/controls";
+import { SettingsMenuTrigger, SettingsRow, ThinSelect } from "@/components/settings/controls";
 import { SearchMenuList } from "@/components/settings/search-menu-list";
 import { useDictationActive } from "@/components/dictation-state";
 import { useDictationLanguage } from "@/components/dictation-preference";
@@ -17,6 +17,47 @@ export function DictationLanguageSetting() {
 	return <SettingsRow label="Language" testid="row-dictation-language" dimmed={active}>
 		<DictationLanguagePicker preference={preference} disabled={active} />
 	</SettingsRow>;
+}
+
+/** Cloud (Deepgram) or on-device (Whisper). Locked while a run is live,
+ * like the language: a run keeps the engine it started with. */
+export function DictationEngineSetting() {
+	const { engine, saving, error, saveEngine, load } = useDictationLanguage();
+	const active = useDictationActive();
+	useEffect(() => { if (engine === undefined) void load().catch(() => {}); }, [engine, load]);
+	return <SettingsRow label="Engine" testid="row-dictation-engine" dimmed={active}>
+		<Hint label={error ?? DICTATION_ENGINES.find((item) => item.code === engine)?.detail ?? "Dictation engine"} side="top">
+			<ThinSelect
+				value={engine ?? ""}
+				ariaLabel="Dictation engine"
+				testid="dictation-engine"
+				disabled={active || saving || engine === undefined}
+				onChange={(next) => { if (isDictationEngine(next)) void saveEngine(next); }}
+			>
+				{engine === undefined && <option value="">…</option>}
+				{DICTATION_ENGINES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
+			</ThinSelect>
+		</Hint>
+	</SettingsRow>;
+}
+
+/** Setup line under the Dictation group, matching the chosen engine. */
+export function DictationSetupHint() {
+	const { engine } = useDictationLanguage();
+	if (engine !== undefined && isLocalDictationEngine(engine)) {
+		return <p data-testid="dictation-setup-hint" className="px-1 text-[11px] leading-relaxed text-muted-foreground/70">
+			Whisper runs on this computer: your audio never leaves it. The model downloads once from Hugging Face on
+			first use. No key needed.
+		</p>;
+	}
+	return <p data-testid="dictation-setup-hint" className="px-1 text-[11px] leading-relaxed text-muted-foreground/70">
+		Create a <a
+			href="https://console.deepgram.com/"
+			target="_blank"
+			rel="noreferrer"
+			className="underline underline-offset-2 hover:text-foreground"
+		>Deepgram API key</a> with the Member role or higher, then add it above.
+	</p>;
 }
 
 function DictationLanguagePicker({ preference, disabled }: {
