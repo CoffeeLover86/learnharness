@@ -19,6 +19,7 @@ type SearchSpec = {
 function getWindowsSearchSpec(env: BinaryLookup["env"], homeDir: string): SearchSpec {
 	const paths = path.win32;
 	const appData = env.APPDATA ?? paths.join(homeDir, "AppData", "Roaming");
+	const npmPrefix = env.npm_config_prefix ?? paths.join(appData, "npm");
 
 	return {
 		paths,
@@ -28,7 +29,11 @@ function getWindowsSearchSpec(env: BinaryLookup["env"], homeDir: string): Search
 		knownDirs: [
 			paths.join(homeDir, ".local", "bin"),
 			paths.join(homeDir, ".claude", "local"),
-			env.npm_config_prefix ?? paths.join(appData, "npm"),
+			npmPrefix,
+			// A global npm install puts only a claude.cmd shim in the prefix,
+			// but that shim forwards to a native claude.exe inside the package.
+			// Spawning that exe directly needs no shell.
+			paths.join(npmPrefix, "node_modules", "@anthropic-ai", "claude-code", "bin"),
 		],
 	};
 }
