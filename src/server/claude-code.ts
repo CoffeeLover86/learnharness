@@ -1,4 +1,4 @@
-import { inspectClaudeInstallation } from "../agent/claude-code/installation.ts";
+import { inspectClaudeInstallation, inspectClaudeSignIn } from "../agent/claude-code/installation.ts";
 import { initAuthEnv } from "./keys.ts";
 import { subscriptionRequestOrigin } from "./web-subscription-http.ts";
 import { claudeCodeEnabled } from "./claude-code-config.ts";
@@ -6,7 +6,11 @@ import { claudeCodeEnabled } from "./claude-code-config.ts";
 /** The Settings status seam: initialize provenance before any child env is copied. */
 export async function claudeCodeInstallationStatus() {
 	initAuthEnv();
-	return inspectClaudeInstallation();
+	const status = await inspectClaudeInstallation();
+	// Fork: a lesson fails with "not signed in" long after this check says
+	// "meets minimum" — so report the CLI's sign-in state here too.
+	if (status.state !== "meets-minimum") return status;
+	return { ...status, signedIn: await inspectClaudeSignIn() };
 }
 
 /** Same-origin browser intent, not user authentication. No CORS grants.

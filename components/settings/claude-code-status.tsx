@@ -8,7 +8,11 @@ import { Toggle } from "./controls";
 export function claudeCodeStatusLabel(status: ClaudeCodeStatus | null): string {
 	switch (status?.state) {
 		case "not-found": return "Not found";
-		case "meets-minimum": return `Version ${status.version} · meets minimum`;
+		case "meets-minimum":
+			// Fork: the sign-in verdict rides along when the server could read it.
+			if (status.signedIn === true) return `Version ${status.version} · meets minimum · signed in`;
+			if (status.signedIn === false) return `Version ${status.version} · not signed in`;
+			return `Version ${status.version} · meets minimum`;
 		case "update-required": return `Version ${status.version} · update required`;
 		default: return "Version could not be checked";
 	}
@@ -84,7 +88,8 @@ export function ClaudeCodeInstallationStatus() {
 			const value = await response.json() as ClaudeCodeStatus;
 			if (!["not-found", "meets-minimum", "update-required", "version-unchecked"].includes(value.state)
 				|| value.minimumVersion !== CLAUDE_CODE_MINIMUM_VERSION
-				|| (value.version !== null && (typeof value.version !== "string" || !/^\d+\.\d+\.\d+$/.test(value.version)))) throw new Error("invalid status");
+				|| (value.version !== null && (typeof value.version !== "string" || !/^\d+\.\d+\.\d+$/.test(value.version)))
+				|| (value.signedIn !== undefined && value.signedIn !== null && typeof value.signedIn !== "boolean")) throw new Error("invalid status");
 			if (!controller.signal.aborted) setStatus(value);
 		} catch {
 			if (!controller.signal.aborted) setStatus(null);
@@ -109,8 +114,11 @@ export function ClaudeCodeInstallationStatus() {
 				<span role="status" className="text-xs text-muted-foreground">{busy ? "Checking…" : claudeCodeStatusLabel(status)}</span>
 				<Button type="button" size="xs" variant="outline" className="cursor-pointer disabled:cursor-not-allowed" disabled={busy} onClick={() => void refresh()} data-testid="claude-code-check-again">Check again</Button>
 			</div>
+			{!busy && status?.signedIn === false && <p role="alert" data-testid="claude-code-signed-out" className="text-xs leading-relaxed text-error">
+				Sign in before starting a lesson: run <code>claude auth login</code> in a terminal (in PowerShell: <code>claude.cmd auth login</code>), then click Check again.
+			</p>}
 			<p className="text-xs leading-relaxed text-muted-foreground"><strong className="font-medium">Install and authenticate Claude Code in your terminal, then select a Claude Code model here.</strong> LearnHarness starts it when needed—no background process required.</p>
-			<p className="text-xs leading-relaxed text-muted-foreground">Checks installation/version only—not authentication, model access, or quota. Claude Code controls billing. Requires v{CLAUDE_CODE_MINIMUM_VERSION}+. <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-foreground">Setup ↗</a></p>
+			<p className="text-xs leading-relaxed text-muted-foreground">Checks installation, version and sign-in—not model access or quota. Claude Code controls billing. Requires v{CLAUDE_CODE_MINIMUM_VERSION}+. <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-foreground">Setup ↗</a></p>
 			<p className="text-xs leading-relaxed text-muted-foreground">Verify AI claims independently—they may be inaccurate, incomplete, misleading, or outdated.</p>
 		</>}
 	</div>;

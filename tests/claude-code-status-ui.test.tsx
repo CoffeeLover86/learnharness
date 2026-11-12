@@ -66,7 +66,7 @@ test("off by default; enabling persists before probing and reveals the version/a
 	assert.notEqual(toggle().parentElement, button().parentElement);
 	assert.equal(document.querySelector('[role="status"]')?.parentElement, button().parentElement);
 	assert.match(document.body.textContent ?? "", /no background process required/);
-	assert.match(document.body.textContent ?? "", /not authentication, model access, or quota/);
+	assert.match(document.body.textContent ?? "", /installation, version and sign-in—not model access or quota/);
 	assert.match(document.body.textContent ?? "", /Claude Code controls billing/);
 	assert.match(document.body.textContent ?? "", /Verify AI claims independently—they may be inaccurate, incomplete, misleading, or outdated\./);
 	assert(document.querySelector("strong")?.textContent?.includes("Install and authenticate"));

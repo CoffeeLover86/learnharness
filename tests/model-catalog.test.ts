@@ -343,13 +343,16 @@ describe("pi thinking truth (pinned against pi-ai upgrades)", () => {
  *  finds a claude binary when installed is true. */
 function withClaudeInstalled(installed: boolean, fn: () => void, enabled = true): void {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-catalog-"));
-	const saved = { PATH: process.env.PATH, HOME: process.env.HOME, npm_config_prefix: process.env.npm_config_prefix };
+	// Fork: APPDATA too — on Windows the lookup also searches the npm prefix
+	// under %APPDATA%, which would find a real install on the test machine.
+	const saved = { PATH: process.env.PATH, HOME: process.env.HOME, npm_config_prefix: process.env.npm_config_prefix, APPDATA: process.env.APPDATA };
 	const settings = readSettings();
 	writeSettings({ ...(settings ?? { version: 1 }), claudeCode: { enabled } });
 
 	if (installed) fs.writeFileSync(path.join(dir, "claude"), "#!/bin/sh\n", { mode: 0o755 });
 	process.env.PATH = dir;
 	process.env.HOME = dir;
+	process.env.APPDATA = dir;
 	delete process.env.npm_config_prefix;
 
 	try {
